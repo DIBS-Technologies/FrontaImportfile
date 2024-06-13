@@ -19,11 +19,11 @@ class ExcelReaderWriter
 
         try
         {
-            // Retrieve values from App.config
+            // Retrieve values from App.config of file path
             string outputDirectory = System.Configuration.ConfigurationManager.AppSettings["OutputDirectory"] ?? "";
             string outputFileName = System.Configuration.ConfigurationManager.AppSettings["OutputFileName"] ?? "";
 
-            // Hardcoded Values from App.config
+            // Hardcoded Values from App.config for columns
             Dictionary<string, string> hardcodedValues = new Dictionary<string, string>
             {
                 { "Tillverkare", System.Configuration.ConfigurationManager.AppSettings["Tillverkare"] ?? "" },
@@ -37,7 +37,7 @@ class ExcelReaderWriter
                 { "ShopId 1 fronta.se", System.Configuration.ConfigurationManager.AppSettings["ShopId1"] ?? "" }
             };
 
-            // Group to Huvudkategori mapping
+            // Group to Huvudkategori mapping 
             Dictionary<string, string> groupToHuvudkategori = new Dictionary<string, string>
             {
                 { "T-SHIRTS", System.Configuration.ConfigurationManager.AppSettings["Group_T-SHIRTS"] ?? "" },
@@ -69,7 +69,7 @@ class ExcelReaderWriter
             // Get the first worksheet in the file (assuming single sheet per file)
             var worksheet2 = package2.Workbook.Worksheets[0];
 
-            // Define the translation dictionary for headers
+            // Define the translation dictionary for headers mapping columns
             var translationDictionary = new Dictionary<string, string>
             {
                 { "Namn", "Product_Name" },
@@ -77,6 +77,7 @@ class ExcelReaderWriter
                 { "Artikelnr variant", "CSV_Code" },
                 { "Pris", "Grp_A_Price" },
                 { "Vikt", "Weight" },
+                { "Tillverkare", "Manufacturer" },
                 { "Lager", "Inventory" },
                 { "Huvudbildadress", "Model" },
                 { "Kompleterandebildadress1", "Front" },
@@ -84,8 +85,7 @@ class ExcelReaderWriter
                 { "Kompleterandebildadress3", "Left" },
                 { "Beskrivning", "Description" },
                 { "Storlek", "Size" },
-                { "Färg", "Colour" },
-                { "Tillverkare", "Manufacturer" },
+                { "Färg", "Colour" },                
                 { "Huvudkategori", "Main Category" },
                 { "Extra kategori 1", "Extra Category 1" },
                 { "Extra kategori 2", "Extra Category 2" },
@@ -97,7 +97,7 @@ class ExcelReaderWriter
                 { "ShopId 1 fronta.se", "ShopId 1 fronta.se" }
             };
 
-            // Get the English headers from the second file
+            // Get the English headers names from the second file
             var englishHeaders = GetColumnHeaders(worksheet2);
 
             // Create a new Excel package for the output
