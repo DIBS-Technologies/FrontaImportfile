@@ -53,7 +53,7 @@ class ExcelReaderWriter
             string inputFilePath2;
             do
             {
-                Console.WriteLine("Enter the file path for the Excel or CSV file (00SWEFROHUV data file):");
+                Console.WriteLine("Enter the file path for the Excel or CSV file :");
                 inputFilePath2 = Console.ReadLine();
             } while (!File.Exists(inputFilePath2));
 
