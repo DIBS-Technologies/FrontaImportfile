@@ -1,15 +1,13 @@
 ﻿using CsvHelper;
 using OfficeOpenXml;
-using System.Configuration;
-using System;
 using System.Globalization;
-using System.IO;
 using System.Text.RegularExpressions;
-using System.Collections.Generic;
-using Microsoft.Extensions.Configuration;
-using static OfficeOpenXml.ExcelErrorValue;
-using System.Reflection.PortableExecutable;
 
+/*
+ * Project: Create Fronta Import File
+ * Author: Jayant Gaikwad
+ * Date: 2024-06-17
+ */
 class ExcelReaderWriter
 {
     static void Main(string[] args)
@@ -22,6 +20,12 @@ class ExcelReaderWriter
             // Retrieve values from App.config of file path
             string outputDirectory = System.Configuration.ConfigurationManager.AppSettings["OutputDirectory"] ?? "";
             string outputFileName = System.Configuration.ConfigurationManager.AppSettings["OutputFileName"] ?? "";
+
+            // Create the output directory if it does not exist
+            if (!Directory.Exists(outputDirectory))
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
 
             // Hardcoded Values from App.config for columns
             Dictionary<string, string> hardcodedValues = new Dictionary<string, string>
@@ -79,10 +83,10 @@ class ExcelReaderWriter
                 { "Vikt", "Weight" },
                 { "Tillverkare", "Manufacturer" },
                 { "Lager", "Inventory" },
-                { "Huvudbildadress", "Model" },
-                { "Kompleterandebildadress1", "Front" },
-                { "Kompleterandebildadress2", "Back" },
-                { "Kompleterandebildadress3", "Left" },
+                { "Huvudbildadress", "Front" },
+                { "Kompleterandebildadress1", "Back" },
+                { "Kompleterandebildadress2", "Left" },
+                { "Kompleterandebildadress3", "Right" },
                 { "Beskrivning", "Description" },
                 { "Storlek", "Size" },
                 { "Färg", "Colour" },                
@@ -106,6 +110,8 @@ class ExcelReaderWriter
 
             // Write the Swedish headers to the output worksheet
             int headerIndex = 1;
+
+            //start from Swedish heeader
             foreach (var header in translationDictionary.Keys)
             {
                 worksheetOutput.Cells[1, headerIndex++].Value = header;
@@ -137,14 +143,11 @@ class ExcelReaderWriter
 
                 // Write the data to the current row
                 int outputCol = 1;
+
                 foreach (var swedishHeader in translationDictionary.Keys)
                 {
                     var englishHeader = translationDictionary.ContainsKey(swedishHeader) ? translationDictionary[swedishHeader] : null;
                     if (englishHeader == "Weight")
-                    {
-                        worksheetOutput.Cells[outputRow, outputCol].Value = null;
-                    }
-                    else if (swedishHeader == "Pris")
                     {
                         worksheetOutput.Cells[outputRow, outputCol].Value = null;
                     }
@@ -156,11 +159,19 @@ class ExcelReaderWriter
                     {
                         worksheetOutput.Cells[outputRow, outputCol].Value = TransformUrl(worksheet2.Cells[row, englishHeaders.IndexOf(englishHeader) + 1].Value?.ToString());
                     }
+                    else if (englishHeader == "TJ_Style_no")
+                    {
+                        worksheetOutput.Cells[outputRow, outputCol].Value = "TJ-" + worksheet2.Cells[row, englishHeaders.IndexOf(englishHeader) + 1].Value?.ToString();
+                    }
                     else if (englishHeader != null && englishHeaders.Contains(englishHeader))
                     {
                         int colIndex = englishHeaders.IndexOf(englishHeader) + 1;
                         worksheetOutput.Cells[outputRow, outputCol].Value = worksheet2.Cells[row, colIndex].Value;
                     }
+
+                    // Set alignment
+                    worksheetOutput.Cells[outputRow, outputCol].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Left;
+                    worksheetOutput.Cells[outputRow, outputCol].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
                     outputCol++;
                 }
 
@@ -203,13 +214,14 @@ class ExcelReaderWriter
             string header = worksheet.Cells[1, col].Value?.ToString();
             string englishHeader = translationDictionary.ContainsKey(header) ? translationDictionary[header] : null;
 
-            if (header == "Artikelnr variant" || header == "Storlek" || header == "Färg" || header == "Lager")
+            if (header == "Artikelnr variant" || header == "Storlek" || header == "Färg" || header == "Lager" || header == "Pris" || header == "Huvudbildadress" || header == "Kompleterandebildadress1" || header == "Kompleterandebildadress2" || header == "Kompleterandebildadress3")
             {
                 worksheet.Cells[rowIndex, col].Value = null; // Set specific columns to null
             }
             else if (header == "Vikt")
             {
                 var weightValue = worksheet2.Cells[sourceRow, englishHeaders.IndexOf("Weight") + 1].Value?.ToString();
+
                 if (!string.IsNullOrEmpty(weightValue))
                 {
                     // Extract numeric value from the string (remove 'g' suffix)
@@ -245,10 +257,15 @@ class ExcelReaderWriter
             {
                 worksheet.Cells[rowIndex, col].Value = hardcodedValues[header]; // Use hardcoded value if applicable
             }
+            else if (header == "Artikelnr produkt")
+            {
+                worksheet.Cells[rowIndex, col].Value = "TJ-" + worksheet2.Cells[sourceRow, englishHeaders.IndexOf(englishHeader) + 1].Value?.ToString();
+            }
             else if (englishHeader != null && englishHeaders.Contains(englishHeader))
             {
                 int colIndex = englishHeaders.IndexOf(englishHeader) + 1;
-                if (englishHeader.StartsWith("Model") || englishHeader.StartsWith("Front") || englishHeader.StartsWith("Back") || englishHeader.StartsWith("Left"))
+
+                if (englishHeader.StartsWith("Front") || englishHeader.StartsWith("Back") || englishHeader.StartsWith("Left") || englishHeader.StartsWith("Right") )
                 {
                     // Apply URL transformation for image columns
                     worksheet.Cells[rowIndex, col].Value = TransformUrl(worksheet2.Cells[sourceRow, colIndex].Value?.ToString());
@@ -272,12 +289,14 @@ class ExcelReaderWriter
             return null;
 
         var match = Regex.Match(url, @"([^/]+/[^/]+\.[^/]+)$");
+
         if (match.Success)
         {
             // Remove "Img/" from the matched URL
-            var cleanedUrl = match.Value.Replace("Img/", "");
-            return $"Product/{cleanedUrl}";
+            var cleanedUrl = match.Value.Replace("Img/","").Replace(' ', '_');
+            return $"product/TJ{cleanedUrl}";
         }
+
         return url;
     }
 
@@ -289,6 +308,7 @@ class ExcelReaderWriter
     static List<string> GetColumnHeaders(ExcelWorksheet worksheet)
     {
         var headers = new List<string>();
+
         for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
         {
             var headerValue = worksheet.Cells[1, col].Value?.ToString();
@@ -297,6 +317,7 @@ class ExcelReaderWriter
                 headers.Add(headerValue);
             }
         }
+
         return headers;
     }
 
@@ -318,6 +339,7 @@ class ExcelReaderWriter
 
                 // Read CSV data using CsvHelper
                 using (var reader = new StreamReader(filePath))
+
                 using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
                 {
                     int rowIndex = 1;
